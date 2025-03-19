@@ -634,6 +634,9 @@ importers:
       react-hook-form:
         specifier: ^7.50.1
         version: 7.50.1(react@18.3.1)
+      react-hotkeys:
+        specifier: ^2.0.0
+        version: 2.0.0(react@18.3.1)
       react-i18next:
         specifier: ^15.1.1
         version: 15.1.1(i18next@23.16.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -11376,6 +11379,11 @@ packages:
     engines: {node: '>=12.22.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18
+
+  react-hotkeys@2.0.0:
+    resolution: {integrity: sha512-3n3OU8vLX/pfcJrR3xJ1zlww6KS1kEJt0Whxc4FiGV+MJrQ1mYSYI3qS/11d2MJDFm8IhOXMTFQirfu6AVOF6Q==}
+    peerDependencies:
+      react: '>= 0.14.0'
 
   react-i18next@15.1.1:
     resolution: {integrity: sha512-R/Vg9wIli2P3FfeI8o1eNJUJue5LWpFsQePCHdQDmX0Co3zkr6kdT8gAseb/yGeWbNz1Txc4bKDQuZYsC0kQfw==}
@@ -27912,6 +27920,12 @@ snapshots:
 
   react-hook-form@7.50.1(react@18.3.1):
     dependencies:
+      react: 18.3.1
+    dev: false
+
+  react-hotkeys@2.0.0(react@18.3.1):
+    dependencies:
+      prop-types: 15.8.1
       react: 18.3.1
     dev: false
 

@@ -3,8 +3,6 @@ import { DequeuedJob, Runner } from "liteque";
 import { buildImpersonatingTRPCClient } from "trpc";
 import { z } from "zod";
 
-import type { InferenceClient } from "@hoarder/shared/inference";
-import type { ZOpenAIRequest } from "@hoarder/shared/queues";
 import { db } from "@hoarder/db";
 import {
   bookmarks,
@@ -14,9 +12,11 @@ import {
 } from "@hoarder/db/schema";
 import { readAsset } from "@hoarder/shared/assetdb";
 import serverConfig from "@hoarder/shared/config";
+import type { InferenceClient } from "@hoarder/shared/inference";
 import { InferenceClientFactory } from "@hoarder/shared/inference";
 import logger from "@hoarder/shared/logger";
 import { buildImagePrompt, buildTextPrompt } from "@hoarder/shared/prompts";
+import type { ZOpenAIRequest } from "@hoarder/shared/queues";
 import {
   OpenAIQueue,
   triggerSearchReindex,
@@ -50,9 +50,7 @@ async function attemptMarkTaggingStatus(
     const request = zOpenAIRequestSchema.parse(jobData);
     await db
       .update(bookmarks)
-      .set({
-        taggingStatus: status,
-      })
+      .set({ taggingStatus: status } as any)
       .where(eq(bookmarks.id, request.bookmarkId));
   } catch (e) {
     logger.error(`Something went wrong when marking the tagging status: ${e}`);
@@ -207,9 +205,9 @@ async function replaceTagsPlaceholders(
 
   return prompts.map((p) =>
     p
-      .replaceAll("$tags", tagsString)
-      .replaceAll("$aiTags", aiTagsString)
-      .replaceAll("$userTags", userTagsString),
+      .replace(/\$tags/g, tagsString)
+      .replace(/\$aiTags/g, aiTagsString)
+      .replace(/\$userTags/g, userTagsString),
   );
 }
 
@@ -297,8 +295,7 @@ async function inferTags(
       `[inference][${jobId}] Inferring tag for bookmark "${bookmark.id}" used ${response.totalTokens} tokens and inferred: ${tags}`,
     );
 
-    // Sometimes the tags contain the hashtag symbol, let's strip them out if they do.
-    // Additionally, trim the tags to prevent whitespaces at the beginning/the end of the tag.
+    // Sometimes the tags contain the hashtag symbol, so strip it out and trim whitespace.
     tags = tags.map((t) => {
       let tag = t;
       if (tag.startsWith("#")) {
@@ -311,7 +308,7 @@ async function inferTags(
   } catch (e) {
     const responseSneak = response.response.substring(0, 20);
     throw new Error(
-      `[inference][${jobId}] The model ignored our prompt and didn't respond with the expected JSON: ${JSON.stringify(e)}. Here's a sneak peak from the response: ${responseSneak}`,
+      `[inference][${jobId}] The model ignored our prompt and didn't respond with the expected JSON: ${JSON.stringify(e)}. Here's a sneak peek from the response: ${responseSneak}`,
     );
   }
 }
@@ -326,7 +323,7 @@ async function connectTags(
   }
 
   await db.transaction(async (tx) => {
-    // Attempt to match exiting tags with the new ones
+    // Attempt to match existing tags with the new ones.
     const { matchedTagIds, notFoundTagNames } = await (async () => {
       const { normalizeTag, sql: normalizedTagSql } = tagNormalizer(
         bookmarkTags.name,
@@ -359,7 +356,7 @@ async function connectTags(
       return { matchedTagIds, notFoundTagNames };
     })();
 
-    // Create tags that didn't exist previously
+    // Create tags that didn't exist previously.
     let newTagIds: string[] = [];
     if (notFoundTagNames.length > 0) {
       newTagIds = (
@@ -376,7 +373,7 @@ async function connectTags(
       ).map((t) => t.id);
     }
 
-    // Delete old AI tags
+    // Delete old AI tags.
     await tx
       .delete(tagsOnBookmarks)
       .where(
@@ -386,13 +383,13 @@ async function connectTags(
         ),
       );
 
-    const allTagIds = new Set([...matchedTagIds, ...newTagIds]);
+    const allTagIds = Array.from(new Set([...matchedTagIds, ...newTagIds]));
 
-    // Attach new ones
+    // Attach new ones.
     await tx
       .insert(tagsOnBookmarks)
       .values(
-        [...allTagIds].map((tagId) => ({
+        allTagIds.map((tagId) => ({
           tagId,
           bookmarkId,
           attachedBy: "ai" as const,
@@ -413,23 +410,24 @@ async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
     return;
   }
 
-  const request = zOpenAIRequestSchema.safeParse(job.data);
-  if (!request.success) {
+  const parsedRequest = zOpenAIRequestSchema.safeParse(job.data);
+
+  const { bookmarkId } = parsedRequest.success ? parsedRequest.data : { bookmarkId: "" };
+  if (!bookmarkId) {
     throw new Error(
-      `[inference][${jobId}] Got malformed job request: ${request.error.toString()}`,
+      `[inference][${jobId}] bookmarkId is missing from the job data`,
     );
   }
 
-  const { bookmarkId } = request.data;
   const bookmark = await fetchBookmark(bookmarkId);
   if (!bookmark) {
     throw new Error(
-      `[inference][${jobId}] bookmark with id ${bookmarkId} was not found`,
+      `[inference][${jobId}] bookmark with id ${bookmarkId} was not found`
     );
   }
 
   logger.info(
-    `[inference][${jobId}] Starting an inference job for bookmark with id "${bookmark.id}"`,
+    `[inference][${jobId}] Starting an inference job for bookmark with id "${bookmark.id}"`
   );
 
   const tags = await inferTags(
@@ -441,9 +439,9 @@ async function runOpenAI(job: DequeuedJob<ZOpenAIRequest>) {
 
   await connectTags(bookmarkId, tags, bookmark.userId);
 
-  // Trigger a webhook
+  // Trigger a webhook.
   await triggerWebhook(bookmarkId, "ai tagged");
 
-  // Update the search index
+  // Update the search index.
   await triggerSearchReindex(bookmarkId);
 }

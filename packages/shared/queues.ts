@@ -1,5 +1,5 @@
-import path from "node:path";
 import { buildDBClient, migrateDB, SqliteQueue } from "liteque";
+import path from "node:path";
 import { z } from "zod";
 
 import serverConfig from "./config";
@@ -34,6 +34,10 @@ export const LinkCrawlerQueue = new SqliteQueue<ZCrawlLinkRequest>(
 // OpenAI Worker
 export const zOpenAIRequestSchema = z.object({
   bookmarkId: z.string(),
+  prompt: z.string(),
+  model: z.enum(["davinci", "curie", "babbage", "ada"]),
+  maxTokens: z.number().optional(),
+  data: z.record(z.string()).optional(),
 });
 export type ZOpenAIRequest = z.infer<typeof zOpenAIRequestSchema>;
 
