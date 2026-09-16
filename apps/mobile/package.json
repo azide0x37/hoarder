@@ -59,7 +59,7 @@
     "zustand": "^4.5.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
+    "@babel/core": "^7.29.6",
     "@hoarder/eslint-config": "workspace:^0.2.0",
     "@hoarder/prettier-config": "workspace:^0.1.0",
     "@hoarder/tailwind-config": "workspace:^0.1.0",
