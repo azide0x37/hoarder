@@ -29,7 +29,7 @@
     "install": "^0.13.0",
     "prettier": "^3.4.2",
     "sherif": "^1.2.0",
-    "turbo": "^2.1.2"
+    "turbo": "^2.9.14"
   },
   "prettier": "@hoarder/prettier-config",
   "packageManager": "pnpm@9.0.0-alpha.8+sha256.a433a59569b00389a951352956faf25d1fdf43b568213fbde591c36274d4bc30",
